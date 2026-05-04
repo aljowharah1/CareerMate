@@ -26,6 +26,7 @@ export interface StudentProfile {
   projects?: string[];
   languages?: string[];
   preferredFields: string[];    // inferred from CV
+  preferredLocation?: string;   // city or country the student wants to work in (e.g. "Riyadh", "Remote", "Saudi Arabia")
   rawCV: string;                // full CV text for cover letter context
   coverLetterStyle?: string;    // style extracted from old cover letter
 }

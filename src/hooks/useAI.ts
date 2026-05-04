@@ -1,9 +1,15 @@
 import { useState, useCallback } from 'react';
-import type { ChatMessage, Internship, UserProfile } from '../types';
+import type { Application, ChatMessage, Internship, UserProfile } from '../types';
 import { sendChatMessage } from '../services/ai/chatbot';
 import { calculateMatchScore, MatchResult } from '../services/ai/matchingEngine';
 
-export function useAI() {
+interface UseAIOptions {
+  profile?: UserProfile | null;
+  applications?: Application[];
+  internships?: Internship[];
+}
+
+export function useAI(options: UseAIOptions = {}) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
 
@@ -19,13 +25,21 @@ export function useAI() {
     setIsTyping(true);
 
     try {
-      const response = await sendChatMessage(content, [...chatMessages, userMessage]);
+      const response = await sendChatMessage(
+        content,
+        [...chatMessages, userMessage],
+        {
+          profile: options.profile ?? null,
+          applications: options.applications ?? [],
+          internships: options.internships ?? [],
+        }
+      );
       setChatMessages((prev) => [...prev, response]);
       return response;
     } finally {
       setIsTyping(false);
     }
-  }, [chatMessages]);
+  }, [chatMessages, options.profile, options.applications, options.internships]);
 
   const getMatchScore = useCallback(
     (profile: UserProfile, internship: Internship): MatchResult => {

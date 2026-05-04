@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAI } from '../hooks/useAI';
+import { useUserContext } from '../context/UserContext';
 import styles from './AIChatPage.module.css';
 
 const WELCOME_MESSAGE = {
@@ -20,7 +21,8 @@ const QUICK_ACTIONS = [
 
 export default function AIChatPage() {
   const navigate = useNavigate();
-  const { chatMessages, isTyping, sendMessage } = useAI();
+  const { profile } = useUserContext();
+  const { chatMessages, isTyping, sendMessage } = useAI({ profile });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const allMessages = [WELCOME_MESSAGE, ...chatMessages];
