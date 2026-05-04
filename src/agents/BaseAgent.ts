@@ -3,7 +3,7 @@
 import type { AgentRole, AgentMessage } from "./types";
 
 const BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const MODEL = "openrouter/free";
 
 // Free models on OpenRouter have a token limit — keep this at 1000
 const MAX_TOKENS = 1000;

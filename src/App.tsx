@@ -51,6 +51,9 @@ function AppShell({ onLogout }: { onLogout: () => void }) {
 }
 
 function App() {
+   console.log('KEY CHECK GEMINI:', import.meta.env.VITE_GEMINI_API_KEY?.slice(0, 15))
+console.log('KEY CHECK OR:', import.meta.env.VITE_OPENROUTER_API_KEY?.slice(0, 15))
+console.log('ALL ENV:', import.meta.env)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('cm_authenticated') === 'true' && !!localStorage.getItem('cm_token');
   });
