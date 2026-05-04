@@ -1,20 +1,17 @@
 // src/agents/agentBridge.ts
-// Converts agent types → existing FURSA types
-// so ALL existing components (CardStack, SwipeCard, TrackPage etc.)
-// keep working without any changes.
+// Converts agent types → existing FURSA app types
+// so all existing components keep working without changes.
 
 import type { Internship, Application, UserProfile } from '../types';
 import type { OpportunityCard, StudentProfile } from './types';
 import { generateId } from '../utils/helpers';
 
-// ── OpportunityCard → Internship ─────────────────────────────
-// This is the key mapping. Every field the UI needs is filled.
+// ── OpportunityCard → Internship ─────────────────────────
 
 export function cardToInternship(card: OpportunityCard): Internship {
   const o = card.opportunity;
   const now = new Date().toISOString();
 
-  // Infer type from field
   const type: Internship['type'] =
     o.field.toLowerCase().includes('business') || o.field.toLowerCase().includes('marketing')
       ? 'Business'
@@ -24,7 +21,6 @@ export function cardToInternship(card: OpportunityCard): Internship {
       ? 'Government'
       : 'Technical';
 
-  // Determine status from deadline
   const deadlineDate = o.deadline ? new Date(o.deadline) : new Date(Date.now() + 30 * 86400000);
   const daysLeft = (deadlineDate.getTime() - Date.now()) / 86400000;
   const status: Internship['status'] =
@@ -48,7 +44,6 @@ export function cardToInternship(card: OpportunityCard): Internship {
     matchScore: card.matchScore,
     matchReasons: [card.matchReason],
     aiRecommendation: card.matchReason,
-    // requirements not in student profile = missing
     missingRequirements: [],
     dateAdded: now,
     source: 'AI_Discovered' as const,
@@ -56,7 +51,7 @@ export function cardToInternship(card: OpportunityCard): Internship {
   };
 }
 
-// ── OpportunityCard → Application (after swipe right) ────────
+// ── OpportunityCard → Application ────────────────────────
 
 export function cardToApplication(card: OpportunityCard): Omit<Application, 'id'> {
   const internship = cardToInternship(card);
@@ -81,21 +76,31 @@ export function cardToApplication(card: OpportunityCard): Omit<Application, 'id'
   };
 }
 
-// ── StudentProfile → UserProfile ──────────────────────────────
-// Fills in the existing UserContext profile with agent-extracted data
+// ── StudentProfile → UserProfile ──────────────────────────
+// Only maps clean scalar fields — never raw CV text or experience arrays
+// to avoid dumping junk text into the profile page UI
 
 export function studentToUserProfile(student: StudentProfile): Partial<UserProfile> {
   return {
-    name: student.name,
-    email: student.email ?? '',
-    university: student.university ?? '',
-    major: student.major,
-    skills: student.skills,
-    preferredIndustries: student.preferredFields,
+    // Basic info — clean scalar values only
+    name: student.name && student.name !== 'Unknown' ? student.name : undefined,
+    email: student.email ?? undefined,
+    university: student.university ?? undefined,
+    major: student.major && student.major !== 'Unknown' ? student.major : undefined,
+    gpa: student.gpa ? parseFloat(student.gpa) : undefined,
+
+    // Skills array — safe to map
+    skills: student.skills?.length ? student.skills : undefined,
+
+    // Preferred fields
+    preferredIndustries: student.preferredFields?.length ? student.preferredFields : undefined,
     preferredLocations: ['Riyadh', 'Saudi Arabia'],
-    preferredRoleTypes: student.preferredFields,
-    // Don't map experience — it's raw text, not the UserProfile Experience[] format
-    experience: [],
-    education: [],
+    preferredRoleTypes: student.preferredFields?.length ? student.preferredFields : undefined,
+
+    // NEVER map these — they contain raw CV text that would appear in the UI:
+    // experience: DO NOT MAP
+    // education: DO NOT MAP
+    // projects: DO NOT MAP
+    // rawCV: DO NOT MAP
   };
 }

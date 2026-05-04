@@ -82,70 +82,78 @@ ${cvText.slice(0, 1500)}`;
   }
 
   // Proper PDF text extraction using pdfjs-dist from node_modules
+  // Replace the parseProfileLocally method in DevPlanningAgent.ts with this:
+
+private parseProfileLocally(text: string): StudentProfile {
+  const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
+  const gpaMatch = text.match(/GPA[:\s]+(\d+\.\d+)/i);
+  const majorMatch = text.match(/Major[:\s]+([^\n\r]+)/i);
+  const uniMatch = text.match(/University[:\s]+([^\n\r]+)/i);
+
+  // Name is always the first non-empty line
+  const firstLine = text.split(/\n|\r/)
+    .map(l => l.trim())
+    .find(l => l.length > 2 && l.length < 60 && !l.includes('@') && !l.includes(':'));
+
+  const skillsSection = text.match(/SKILLS?\s*\n?([\s\S]+?)(?=EDUCATION|EXPERIENCE|PROJECTS|LANGUAGES|CERTIFICATIONS|$)/i);
+  const skills = skillsSection
+    ? skillsSection[1]
+        .replace(/\n/g, ',')
+        .split(/,/)
+        .map(s => s.trim())
+        .filter(s => s.length > 1 && s.length < 30 && !s.match(/^\d/))
+    : [];
+
+  const major = majorMatch ? majorMatch[1].trim() : 'Computer Science';
+  const university = uniMatch ? uniMatch[1].trim() : undefined;
+
+  return {
+    name: firstLine || 'Student',
+    email: emailMatch?.[0],
+    major,
+    university,
+    gpa: gpaMatch ? gpaMatch[1] : undefined,
+    skills: skills.slice(0, 12),
+    experience: [],
+    education: [],
+    projects: [],
+    languages: [],
+    preferredFields: this.inferPreferredFields(major, skills),
+    rawCV: text.slice(0, 200), // Keep short — just for reference
+  };
+}
+
   private async base64ToText(base64: string): Promise<string> {
-    try {
-      const pdfjsLib = await import("pdfjs-dist");
+  try {
+    const pdfjsLib = await import("pdfjs-dist");
+    const workerUrl = new URL(
+      "pdfjs-dist/build/pdf.worker.min.mjs",
+      import.meta.url
+    );
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl.toString();
 
-      const workerUrl = new URL(
-        "pdfjs-dist/build/pdf.worker.min.mjs",
-        import.meta.url
-      );
-      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl.toString();
-
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-
-      const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-      let fullText = "";
-
-      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-        const page = await pdf.getPage(pageNum);
-        const content = await page.getTextContent();
-        const pageText = content.items
-          .map((item: any) => item.str)
-          .join(" ");
-        fullText += pageText + "\n";
-      }
-
-      console.log("📄 PDF properly extracted:", fullText.slice(0, 300));
-      return fullText;
-    } catch (e) {
-      console.error("PDF extraction failed:", e);
-      return "";
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
     }
-  }
 
-  // Local fallback parser in case AI fails
-  private parseProfileLocally(text: string): StudentProfile {
-    const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
-    const gpaMatch = text.match(/GPA[:\s]+(\d+\.\d+)/i);
-    const majorMatch = text.match(/Major[:\s]+([^\n]+)/i);
-    const uniMatch = text.match(/University[:\s]+([^\n]+)/i);
-    const lines = text.split(/\s{2,}|\n/).map(l => l.trim()).filter(Boolean);
-    const name = lines[0] || "Student";
-    const skillsSection = text.match(/SKILLS?\s+([\s\S]+?)(?=EDUCATION|EXPERIENCE|PROJECTS|LANGUAGES|$)/i);
-    const skills = skillsSection
-      ? skillsSection[1].split(/,|\n/).map(s => s.trim()).filter(s => s.length > 1 && s.length < 30)
-      : [];
-    const major = majorMatch ? majorMatch[1].trim() : "Computer Science";
-    return {
-      name,
-      email: emailMatch?.[0],
-      major,
-      university: uniMatch ? uniMatch[1].trim() : undefined,
-      gpa: gpaMatch ? gpaMatch[1] : undefined,
-      skills: skills.slice(0, 12),
-      experience: [],
-      education: [],
-      projects: [],
-      languages: [],
-      preferredFields: this.inferPreferredFields(major, skills),
-      rawCV: text.slice(0, 500),
-    };
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+    let fullText = "";
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const content = await page.getTextContent();
+      fullText += content.items.map((item: any) => item.str).join(" ") + "\n";
+    }
+
+    console.log("📄 PDF properly extracted:", fullText.slice(0, 200));
+    return fullText;
+  } catch (e) {
+    console.error("PDF extraction failed:", e);
+    return "";
   }
+}
 
   private inferPreferredFields(major: string, skills: string[]): string[] {
     const m = major.toLowerCase();
