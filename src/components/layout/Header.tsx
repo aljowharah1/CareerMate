@@ -16,7 +16,7 @@ export default function Header() {
           <div className={styles.logoMark}>
             <div className={styles.logoTriangle} />
           </div>
-          <span className={styles.logoText}>careermate</span>
+          <span className={styles.logoText}>FURSA</span>
         </NavLink>
 
         <nav className={styles.desktopNav}>

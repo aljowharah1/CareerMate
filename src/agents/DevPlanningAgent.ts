@@ -281,25 +281,38 @@ Return ONLY a JSON array (no markdown, no explanation):
     profile: StudentProfile
   ): Promise<OpportunityCard> {
     this.log("DevPlanningAgent", `Swipe right: ${card.opportunity.title} at ${card.opportunity.company}`);
-    const updated = { ...card, status: "liked" as const };
+    this.log("DevPlanningAgent", "Generating tailored CV, cover letter, and interview tips in parallel");
 
-    if (card.needsCoverLetter) {
-      this.log("DevPlanningAgent", "Generating cover letter...");
-      try {
-        updated.coverLetter = await this.generateCoverLetter(card.opportunity, profile);
-      } catch {
-        updated.coverLetter = this.fallbackCoverLetter(card.opportunity, profile);
-      }
-    }
+    // Every swipe-right gets all three deliverables — generated in parallel for speed.
+    // Each one independently falls back to a deterministic template if the LLM call fails.
+    const [cvResult, clResult, tipsResult] = await Promise.allSettled([
+      this.generateTailoredCV(card.opportunity, profile),
+      this.generateCoverLetter(card.opportunity, profile),
+      this.generateInterviewTips(card.opportunity, profile),
+    ]);
 
-    try {
-      updated.interviewTips = await this.generateInterviewTips(card.opportunity, profile);
-    } catch {
-      updated.interviewTips = this.fallbackInterviewTips(card.opportunity);
-    }
+    const tailoredCV = cvResult.status === "fulfilled" && cvResult.value?.trim()
+      ? cvResult.value
+      : this.fallbackTailoredCV(card.opportunity, profile);
 
-    updated.followUpDate = this.calculateFollowUpDate();
-    this.log("QualityTestingManager", "Deliverables ready, sending to QA");
+    const coverLetter = clResult.status === "fulfilled" && clResult.value?.trim()
+      ? clResult.value
+      : this.fallbackCoverLetter(card.opportunity, profile);
+
+    const interviewTips = tipsResult.status === "fulfilled" && tipsResult.value?.trim()
+      ? tipsResult.value
+      : this.fallbackInterviewTips(card.opportunity);
+
+    const updated: OpportunityCard = {
+      ...card,
+      status: "liked" as const,
+      tailoredCV,
+      coverLetter,
+      interviewTips,
+      followUpDate: this.calculateFollowUpDate(),
+    };
+
+    this.log("QualityTestingManager", "Deliverables ready (CV + cover letter + tips), sending to QA");
     return updated;
   }
 
@@ -324,6 +337,79 @@ Return ONLY a JSON array (no markdown, no explanation):
         : [...preferences.likedFields, card.opportunity.field],
       likedCompanies: [...preferences.likedCompanies, card.opportunity.company],
     };
+  }
+
+  // ─── Tailored CV ──────────────────────────────────────────
+
+  private async generateTailoredCV(opp: Opportunity, profile: StudentProfile): Promise<string> {
+    const prompt = `Tailor this student's CV for the ${opp.title} role at ${opp.company}.
+
+STUDENT:
+- Name: ${profile.name}
+- Major: ${profile.major}${profile.university ? ` at ${profile.university}` : ""}${profile.gpa ? ` (GPA ${profile.gpa})` : ""}
+- Email: ${profile.email ?? ""}
+- Skills: ${profile.skills.join(", ")}
+- Experience: ${(profile.experience ?? []).slice(0, 5).join(" | ") || "none listed"}
+- Projects: ${(profile.projects ?? []).slice(0, 4).join(" | ") || "none listed"}
+- Education: ${(profile.education ?? []).slice(0, 3).join(" | ") || "none listed"}
+- Languages: ${(profile.languages ?? []).join(", ") || "not specified"}
+
+ROLE FIELD: ${opp.field}
+ROLE REQUIRES: ${opp.requirements.join(", ")}
+
+Produce a one-page tailored CV in markdown that:
+- Opens with a 2-line professional summary highlighting the skills/experience most relevant to ${opp.title}.
+- Reorders the Skills section so the most role-relevant skills appear first.
+- Reorders Experience and Projects to lead with the most relevant items, rephrasing bullets to emphasize how they match this role's requirements.
+- Keeps the student's real facts intact — DO NOT invent experience, projects, certifications, or skills that aren't in the input above.
+- Uses sections: Summary, Skills, Education, Experience, Projects, Languages (omit any section the student has nothing for).
+- Returns ONLY the CV markdown. No preamble, no explanation, no closing notes.`;
+    return this.callLLM(prompt);
+  }
+
+  private fallbackTailoredCV(opp: Opportunity, profile: StudentProfile): string {
+    const reqLower = opp.requirements.map((r) => r.toLowerCase());
+    const isRelevant = (s: string) => {
+      const sLower = s.toLowerCase();
+      return reqLower.some((r) => sLower.includes(r) || r.includes(sLower));
+    };
+    const reorderedSkills = [
+      ...profile.skills.filter(isRelevant),
+      ...profile.skills.filter((s) => !isRelevant(s)),
+    ];
+
+    const headerLine = [profile.email, profile.university].filter(Boolean).join(" • ");
+    const summary = `${profile.major} student${profile.university ? ` at ${profile.university}` : ""}${profile.gpa ? ` (GPA ${profile.gpa})` : ""} with hands-on experience in ${reorderedSkills.slice(0, 3).join(", ") || profile.major}. Targeting a ${opp.field} role at ${opp.company}.`;
+
+    const sections: string[] = [
+      `# ${profile.name}`,
+      headerLine,
+      "",
+      `_Tailored for ${opp.title} at ${opp.company}_`,
+      "",
+      "## Summary",
+      summary,
+      "",
+      "## Skills",
+      reorderedSkills.length > 0
+        ? reorderedSkills.map((s) => `- ${s}`).join("\n")
+        : "- (no skills listed in CV)",
+    ];
+
+    if (profile.education?.length) {
+      sections.push("", "## Education", ...profile.education.map((e) => `- ${e}`));
+    }
+    if (profile.experience?.length) {
+      sections.push("", "## Experience", ...profile.experience.map((e) => `- ${e}`));
+    }
+    if (profile.projects?.length) {
+      sections.push("", "## Projects", ...profile.projects.map((p) => `- ${p}`));
+    }
+    if (profile.languages?.length) {
+      sections.push("", "## Languages", ...profile.languages.map((l) => `- ${l}`));
+    }
+
+    return sections.join("\n");
   }
 
   // ─── Cover letter ─────────────────────────────────────────

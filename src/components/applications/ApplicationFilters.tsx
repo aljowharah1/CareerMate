@@ -3,7 +3,6 @@ import styles from './ApplicationFilters.module.css';
 export type FilterCategory =
   | 'All'
   | 'Action_Needed'
-  | 'Auto_Applied'
   | 'Interviews'
   | 'Under_Review'
   | 'Results';
@@ -23,7 +22,6 @@ interface ApplicationFiltersProps {
 const FILTER_TABS: { key: FilterCategory; label: string }[] = [
   { key: 'All', label: 'All' },
   { key: 'Action_Needed', label: 'Action Needed' },
-  { key: 'Auto_Applied', label: 'Auto-Applied' },
   { key: 'Interviews', label: 'Interviews' },
   { key: 'Under_Review', label: 'Under Review' },
   { key: 'Results', label: 'Results' },
@@ -39,8 +37,6 @@ function getFilterCount(
       return total;
     case 'Action_Needed':
       return (statusCounts['Needs_Manual_Action'] || 0);
-    case 'Auto_Applied':
-      return (statusCounts['Auto_Applied'] || 0);
     case 'Interviews':
       return (statusCounts['Interview_Scheduled'] || 0);
     case 'Under_Review':

@@ -52,6 +52,7 @@ export interface OpportunityCard {
   matchReason: string;
   needsCoverLetter: boolean;
   coverLetter?: string;         // generated after swipe right
+  tailoredCV?: string;          // CV rewritten to emphasize skills/experience for this specific role — generated after swipe right
   interviewTips?: string;       // generated after swipe right
   followUpDate?: string;
   status: "unseen" | "liked" | "skipped" | "applied" | "interviewing" | "offered" | "rejected";

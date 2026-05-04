@@ -11,6 +11,7 @@ export interface Application {
   interviewDate?: string;
   responseDate?: string;
   cvVersion: string;
+  tailoredCV?: string;     // full text of the auto-tailored CV body (the cvVersion field stores the label only)
   coverLetter?: string;
   additionalDocs: string[];
   notes: string;

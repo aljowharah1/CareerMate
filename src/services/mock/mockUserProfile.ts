@@ -142,7 +142,7 @@ export const mockUserProfile: UserProfile = {
     ],
   },
   totalApplications: 10,
-  autoAppliedCount: 4,
+  autoAppliedCount: 0,
   interviewsScheduled: 3,
   offersReceived: 1,
   notificationsEnabled: true,

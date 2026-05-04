@@ -116,9 +116,14 @@ You communicate clearly and concisely with the student.`
     console.log("👉 Team Leader: Swipe right on", card.opportunity.title, "@", card.opportunity.company);
     this.log("DevPlanningAgent", `Swipe right on: ${card.opportunity.title}`);
 
-    console.log("⚙️ Agent 3 (DevPlanning): Generating cover letter and interview tips...");
+    console.log("⚙️ Agent 3 (DevPlanning): Generating tailored CV, cover letter, and interview tips...");
     const updatedCard = await this.devPlanning.handleSwipeRight(card, profile);
-    console.log("✅ Agent 3 (DevPlanning): Cover letter", updatedCard.coverLetter ? "generated ✓" : "not needed", "| Interview tips:", updatedCard.interviewTips ? "generated ✓" : "skipped");
+    console.log(
+      "✅ Agent 3 (DevPlanning):",
+      "Tailored CV", updatedCard.tailoredCV ? "✓" : "✗",
+      "| Cover letter", updatedCard.coverLetter ? "✓" : "✗",
+      "| Interview tips", updatedCard.interviewTips ? "✓" : "✗"
+    );
     console.log("✅ Agent 4 (QA Manager): Output approved");
 
     const updatedPreferences = this.devPlanning.handleSwipeRightPreference(
@@ -126,7 +131,7 @@ You communicate clearly and concisely with the student.`
       preferences
     );
 
-    this.log("User", `Delivered: cover letter ${updatedCard.needsCoverLetter ? "✓" : "not needed"}, tips ✓`);
+    this.log("User", "Delivered: tailored CV ✓, cover letter ✓, interview tips ✓");
     return { updatedCard, updatedPreferences };
   }
 

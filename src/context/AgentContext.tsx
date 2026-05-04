@@ -59,6 +59,9 @@ interface AgentContextValue {
   uploadCV: (cvFile: File, coverLetterFile?: File) => Promise<void>;
   onSwipeRight: (card: OpportunityCard) => Promise<void>;
   onSwipeLeft: (card: OpportunityCard) => Promise<void>;
+  // Runs the DevPlanning agent to produce a tailored CV + cover letter + interview tips
+  // for a card and updates agent state. Does NOT create an Application — the caller does that.
+  generateDeliverables: (card: OpportunityCard) => Promise<OpportunityCard>;
 }
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -115,6 +118,21 @@ for (const card of result.cards) {
     }
   }, [addInternship, updateProfile, showToast]);
 
+  const generateDeliverables = useCallback(async (card: OpportunityCard): Promise<OpportunityCard> => {
+    if (!agentState.profile) return card;
+    try {
+      const { updatedCard, updatedPreferences } = await teamLeader.current.handleSwipeRight(
+        card, agentState.profile, agentState.swipePreferences
+      );
+      dispatch({ type: 'UPDATE_CARD', card: updatedCard });
+      dispatch({ type: 'UPDATE_PREFERENCES', preferences: updatedPreferences });
+      return updatedCard;
+    } catch (err) {
+      console.warn('generateDeliverables failed:', err);
+      return card;
+    }
+  }, [agentState.profile, agentState.swipePreferences]);
+
   const onSwipeRight = useCallback(async (card: OpportunityCard) => {
     if (!agentState.profile) return;
     try {
@@ -124,7 +142,9 @@ for (const card of result.cards) {
       await addApplication(cardToApplication(updatedCard));
       dispatch({ type: 'UPDATE_CARD', card: updatedCard });
       dispatch({ type: 'UPDATE_PREFERENCES', preferences: updatedPreferences });
-      if (updatedCard.needsCoverLetter && updatedCard.coverLetter) {
+      if (updatedCard.tailoredCV && updatedCard.coverLetter) {
+        showToast(`Tailored CV + cover letter generated for ${card.opportunity.company}!`, 'success');
+      } else if (updatedCard.coverLetter) {
         showToast(`Cover letter generated for ${card.opportunity.company}!`, 'success');
       } else {
         showToast(`Saved ${card.opportunity.company}`, 'info');
@@ -154,7 +174,7 @@ for (const card of result.cards) {
   }, [agentState.profile, agentState.cards, agentState.swipePreferences, addInternship]);
 
   return (
-    <AgentContext.Provider value={{ agentState, uploadCV, onSwipeRight, onSwipeLeft }}>
+    <AgentContext.Provider value={{ agentState, uploadCV, onSwipeRight, onSwipeLeft, generateDeliverables }}>
       {children}
     </AgentContext.Provider>
   );

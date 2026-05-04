@@ -25,7 +25,7 @@ function getCompanyColor(name: string): string {
 }
 
 const ALL_STATUSES: Application['status'][] = [
-  'Saved', 'Needs_Manual_Action', 'Auto_Applied', 'Submitted',
+  'Saved', 'Needs_Manual_Action', 'Submitted',
   'Under_Review', 'Interview_Scheduled', 'Offer_Received',
   'Accepted', 'Rejected', 'Withdrawn',
 ];
@@ -38,11 +38,41 @@ export default function ApplicationDetail({
   const [notes, setNotes] = useState(application.notes);
   const { internship } = application;
 
-  const allDocs = [
-    application.cvVersion && { name: application.cvVersion, type: 'CV' },
-    application.coverLetter && { name: application.coverLetter, type: 'Cover Letter' },
-    ...application.additionalDocs.map((d) => ({ name: d, type: 'Document' })),
-  ].filter(Boolean) as { name: string; type: string }[];
+  const safeFilename = (raw: string) =>
+    raw.replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80) || 'document';
+
+  const downloadText = (filename: string, content: string) => {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  type DownloadableDoc = { label: string; type: string; filename: string; body: string };
+  const allDocs: DownloadableDoc[] = [];
+
+  if (application.tailoredCV) {
+    allDocs.push({
+      label: application.cvVersion || `Tailored CV — ${internship.company}`,
+      type: 'CV',
+      filename: `${safeFilename(`CV_${internship.company}_${internship.title}`)}.md`,
+      body: application.tailoredCV,
+    });
+  }
+
+  if (application.coverLetter) {
+    allDocs.push({
+      label: `Cover Letter — ${internship.company}`,
+      type: 'Cover Letter',
+      filename: `${safeFilename(`CoverLetter_${internship.company}_${internship.title}`)}.md`,
+      body: application.coverLetter,
+    });
+  }
 
   const handleSaveNotes = () => {
     onUpdate(application.id, { notes, lastUpdated: new Date().toISOString() });
@@ -84,16 +114,21 @@ export default function ApplicationDetail({
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>
             <span className={styles.sectionIcon}>&#128196;</span>
-            Attached Documents
+            Auto-Generated Documents
           </h3>
           <div className={styles.docList}>
             {allDocs.map((doc, i) => (
               <div key={i} className={styles.docItem}>
                 <span className={styles.docIcon}>&#128196;</span>
-                <span className={styles.docName}>{doc.name}</span>
+                <span className={styles.docName}>{doc.label}</span>
                 <div className={styles.docActions}>
-                  <button className={styles.smallBtn}>View</button>
-                  <button className={styles.smallBtn}>Download</button>
+                  <button
+                    className={styles.smallBtn}
+                    onClick={() => downloadText(doc.filename, doc.body)}
+                    title={`Download ${doc.type}`}
+                  >
+                    Download
+                  </button>
                 </div>
               </div>
             ))}

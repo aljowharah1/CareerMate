@@ -43,10 +43,8 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
     'Include more quantitative achievements in CV',
   ];
 
-  const settingsItems: { label: string; key: 'notificationsEnabled' | 'aiSuggestionsEnabled' | 'autoApplyEnabled' | 'darkMode' }[] = [
-    { label: 'Notifications', key: 'notificationsEnabled' },
+  const settingsItems: { label: string; key: 'aiSuggestionsEnabled' | 'darkMode' }[] = [
     { label: 'Dark Mode', key: 'darkMode' },
-    { label: 'Auto-Apply', key: 'autoApplyEnabled' },
     { label: 'AI Suggestions', key: 'aiSuggestionsEnabled' },
   ];
 
@@ -59,7 +57,7 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
           <h2 className={styles.profileName}>{profile.name}</h2>
           <div className={styles.profileEmail}>{profile.email}</div>
           <div className={styles.profileUni}>
-            {profile.university} · {(profile as any).year || 'Student'}
+            {profile.university} · {profile.graduationYear || 'Student'}
           </div>
         </div>
         <button className={styles.editBtn}>edit</button>
@@ -82,10 +80,6 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
           <div className={styles.statTileLabel}>Offers</div>
           <div className={styles.statTileValue}>{applicationStats.offers}</div>
         </div>
-        <div className={styles.statTile}>
-          <div className={styles.statTileLabel}>Auto-applied</div>
-          <div className={styles.statTileValue}>{applicationStats.autoApplied ?? 0}</div>
-        </div>
       </div>
 
       {/* Documents */}
@@ -97,8 +91,8 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
           <div key={doc.id} className={styles.docItem}>
             <div className={styles.docIcon}>PDF</div>
             <div className={styles.docName}>
-              {doc.name} {(doc as any).current && <span className={styles.docCurrent}>· CURRENT</span>}
-              <div className={styles.docMeta}>{doc.type} · {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
+              {doc.name} {doc.id === profile.masterCVId && <span className={styles.docCurrent}>· CURRENT</span>}
+              <div className={styles.docMeta}>{doc.type} · {doc.createdDate ? new Date(doc.createdDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}</div>
             </div>
             <button className={styles.docMenu} onClick={() => deleteDocument(doc.id)}>⋯</button>
           </div>

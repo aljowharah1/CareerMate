@@ -3,8 +3,35 @@
 // so all existing components keep working without changes.
 
 import type { Internship, Application, UserProfile } from '../types';
-import type { OpportunityCard, StudentProfile } from './types';
-import { generateId } from '../utils/helpers';
+import type { Opportunity, OpportunityCard, StudentProfile } from './types';
+
+// ── Internship → OpportunityCard ─────────────────────────
+// Builds a synthetic OpportunityCard from an Internship so that swipe-right
+// on a legacy/mock internship can still trigger the agent's CV + cover letter generation.
+
+export function internshipToCard(internship: Internship): OpportunityCard {
+  const opportunity: Opportunity = {
+    id: internship.id,
+    title: internship.title,
+    company: internship.company,
+    field: internship.tags?.[0] ?? internship.type ?? 'Technology',
+    location: internship.location,
+    description: internship.description,
+    requirements: internship.requirements,
+    deadline: internship.deadline,
+    applyUrl: internship.applicationLink,
+    source: internship.source,
+  };
+
+  return {
+    opportunity,
+    matchScore: internship.matchScore,
+    matchReason: internship.aiRecommendation || internship.matchReasons?.[0] || `Match for ${internship.title}`,
+    needsCoverLetter: true,
+    status: 'unseen',
+    qualityApproved: true,
+  };
+}
 
 // ── OpportunityCard → Internship ─────────────────────────
 
@@ -53,18 +80,27 @@ export function cardToInternship(card: OpportunityCard): Internship {
 
 // ── OpportunityCard → Application ────────────────────────
 
-export function cardToApplication(card: OpportunityCard): Omit<Application, 'id'> {
+export function cardToApplication(
+  card: OpportunityCard,
+  options: { autoApply?: boolean } = {}
+): Omit<Application, 'id'> {
   const internship = cardToInternship(card);
   const now = new Date().toISOString();
+  const autoApply = options.autoApply ?? false;
+
+  const cvVersion = card.tailoredCV
+    ? `Auto-Tailored CV — ${card.opportunity.company}`
+    : 'default';
 
   return {
     internshipId: internship.id,
     internship,
-    status: 'Needs_Manual_Action',
+    status: autoApply ? 'Auto_Applied' : 'Needs_Manual_Action',
     savedDate: now,
-    appliedDate: undefined,
+    appliedDate: autoApply ? now : undefined,
     deadlineDate: internship.deadline,
-    cvVersion: 'default',
+    cvVersion,
+    tailoredCV: card.tailoredCV,
     coverLetter: card.coverLetter,
     additionalDocs: [],
     notes: card.interviewTips ? `Interview Tips:\n${card.interviewTips}` : '',
@@ -72,7 +108,7 @@ export function cardToApplication(card: OpportunityCard): Omit<Application, 'id'
     confidenceScore: card.matchScore,
     createdDate: now,
     lastUpdated: now,
-    autoApplied: false,
+    autoApplied: autoApply,
   };
 }
 

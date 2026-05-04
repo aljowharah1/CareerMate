@@ -22,7 +22,6 @@ export function useProfile() {
     hasProjects: profile.projects.length > 0,
     applicationStats: {
       total: profile.totalApplications,
-      autoApplied: profile.autoAppliedCount,
       interviews: profile.interviewsScheduled,
       offers: profile.offersReceived,
     },

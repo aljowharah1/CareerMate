@@ -3,7 +3,6 @@ import styles from './ProfileStats.module.css';
 interface ProfileStatsProps {
   stats: {
     total: number;
-    autoApplied: number;
     interviews: number;
     offers: number;
   };
@@ -12,7 +11,6 @@ interface ProfileStatsProps {
 export default function ProfileStats({ stats }: ProfileStatsProps) {
   const items = [
     { label: 'Total Applications', value: stats.total },
-    { label: 'Auto-Applied', value: stats.autoApplied },
     { label: 'Interviews', value: stats.interviews },
     { label: 'Offers', value: stats.offers },
   ];

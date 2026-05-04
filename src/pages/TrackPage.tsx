@@ -4,7 +4,7 @@ import { useApplications } from '../hooks/useApplications';
 import type { Application } from '../types';
 import styles from './TrackPage.module.css';
 
-type FilterKey = 'all' | 'action' | 'auto' | 'interviews' | 'review' | 'results';
+type FilterKey = 'all' | 'action' | 'interviews' | 'review' | 'results';
 type SortKey = 'recent' | 'company' | 'applied';
 
 interface SectionConfig {
@@ -16,7 +16,6 @@ interface SectionConfig {
 
 const SECTIONS: SectionConfig[] = [
   { key: 'action',     label: 'Action Required', statuses: ['Needs_Manual_Action'], emptyText: 'Nothing needs your attention.' },
-  { key: 'auto',       label: 'Auto-Applied',    statuses: ['Auto_Applied'],        emptyText: 'No auto-applied applications yet.' },
   { key: 'interviews', label: 'Interviews',       statuses: ['Interview_Scheduled'], emptyText: 'No upcoming interviews.' },
   { key: 'review',     label: 'Under Review',     statuses: ['Under_Review', 'Submitted'], emptyText: 'No applications under review.' },
   { key: 'results',    label: 'Results',          statuses: ['Accepted', 'Rejected', 'Offer_Received', 'Withdrawn'], emptyText: 'No results yet.' },
@@ -67,7 +66,7 @@ function sortApps(apps: Application[], by: SortKey): Application[] {
 
 export default function TrackPage() {
   const navigate = useNavigate();
-  const { allApplications, loading, statusCounts } = useApplications();
+  const { allApplications, loading } = useApplications();
 
   const [filter, setFilter] = useState<FilterKey>('all');
   const [sort, setSort] = useState<SortKey>('recent');
@@ -84,7 +83,6 @@ export default function TrackPage() {
   }, [allApplications, search]);
 
   const actionCount     = filtered.filter((a) => a.status === 'Needs_Manual_Action').length;
-  const autoCount       = filtered.filter((a) => a.status === 'Auto_Applied').length;
   const interviewCount  = filtered.filter((a) => a.status === 'Interview_Scheduled').length;
   const reviewCount     = filtered.filter((a) => a.status === 'Under_Review' || a.status === 'Submitted').length;
   const resultsCount    = filtered.filter((a) => ['Accepted','Rejected','Offer_Received','Withdrawn'].includes(a.status)).length;
@@ -92,7 +90,6 @@ export default function TrackPage() {
   const filterOptions: { key: FilterKey; label: string; count: number }[] = [
     { key: 'all',        label: 'All',       count: allApplications.length },
     { key: 'action',     label: 'Action',    count: actionCount },
-    { key: 'auto',       label: 'Auto',      count: autoCount },
     { key: 'interviews', label: 'Interview', count: interviewCount },
     { key: 'review',     label: 'Review',    count: reviewCount },
     { key: 'results',    label: 'Results',   count: resultsCount },

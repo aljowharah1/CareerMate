@@ -16,7 +16,6 @@ import AIChatPage from './pages/AIChatPage';
 import AboutPage from './pages/AboutPage';
 import ApplicationDetailPage from './pages/ApplicationDetailPage';
 import NotFoundPage from './pages/NotFoundPage';
-import Toast from './components/common/Toast';
 import { CVUpload } from './components/CVUpload';
 
 // Inner component — has access to AgentContext
@@ -45,7 +44,6 @@ function AppShell({ onLogout }: { onLogout: () => void }) {
       </main>
       <Footer />
       <BottomNav />
-      <Toast />
     </div>
   );
 }

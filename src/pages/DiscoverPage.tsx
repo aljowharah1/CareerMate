@@ -141,14 +141,6 @@ export default function DiscoverPage() {
             Reset Deck
           </button>
         </div>
-        <span
-          className={`${styles.autoBadge} ${
-            profile.autoApplyEnabled ? styles.autoBadgeOn : styles.autoBadgeOff
-          }`}
-        >
-          {profile.autoApplyEnabled && <span className={styles.autoBadgeDot} />}
-          Auto-Apply {profile.autoApplyEnabled ? 'ON' : 'OFF'}
-        </span>
       </div>
 
       <div className={styles.cardStage}>
