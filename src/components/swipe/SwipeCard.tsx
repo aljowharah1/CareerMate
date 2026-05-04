@@ -85,7 +85,6 @@ export default function SwipeCard({
 
       {/* Top bar */}
       <div className={styles.topBar}>
-        <span className={styles.cardId}>{internship.id?.toLowerCase() || internship.company.toLowerCase().replace(/\s/g, '-')}</span>
         <span className={`${styles.matchBadge} ${matchClass}`}>{match}% match</span>
       </div>
 

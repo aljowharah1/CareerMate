@@ -49,10 +49,6 @@ export default function CardStack({
 
   return (
     <div className={styles.wrapper}>
-      {internships.length > VISIBLE_COUNT && (
-        <span className={styles.counter}>{internships.length}</span>
-      )}
-
       {visible.map((internship, index) => {
         const isTop = index === 0;
         const scale = 1 - index * 0.04;

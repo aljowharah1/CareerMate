@@ -164,7 +164,8 @@
   align-items: center;
   justify-content: center;
   min-height: 360px;
-  overflow: hidden;
+  /* Generous padding so the card's drop shadow has room to render without being clipped */
+  padding: 24px 8px;
 }
 
 /* ── Flash toast ── */

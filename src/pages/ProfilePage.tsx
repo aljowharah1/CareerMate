@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProfile } from '../hooks/useProfile';
 import { useDocuments } from '../hooks/useDocuments';
@@ -13,35 +12,10 @@ function initials(name: string) {
   return (name || '?').split(/\s+/).map((s) => s[0]).slice(0, 2).join('').toUpperCase();
 }
 
-function ScoreDial({ score }: { score: number }) {
-  const r = 30, c = 2 * Math.PI * r;
-  const dash = (score / 100) * c;
-  return (
-    <svg width="72" height="72" viewBox="0 0 72 72" style={{ flexShrink: 0 }}>
-      <circle cx="36" cy="36" r={r} fill="none" stroke="var(--line-strong)" strokeWidth="4" />
-      <circle cx="36" cy="36" r={r} fill="none" stroke="var(--signal)" strokeWidth="4"
-        strokeDasharray={`${dash} ${c}`} strokeLinecap="round" transform="rotate(-90 36 36)" />
-    </svg>
-  );
-}
-
 export default function ProfilePage({ onLogout }: ProfilePageProps) {
   const navigate = useNavigate();
   const { profile, toggleSetting, applicationStats } = useProfile();
   const { documents, uploadDocument, deleteDocument } = useDocuments();
-  const [analyzing, setAnalyzing] = useState(false);
-
-  const strengthScore = 78;
-  const strongAreas = [
-    'Strong technical skills in AI/ML and Computer Vision',
-    'Research experience with published project work',
-    'Relevant university coursework and GPA',
-  ];
-  const suggestions = [
-    'Add cloud computing certifications (AWS/Azure)',
-    'Gain more customer-facing or leadership experience',
-    'Include more quantitative achievements in CV',
-  ];
 
   const settingsItems: { label: string; key: 'aiSuggestionsEnabled' | 'darkMode' }[] = [
     { label: 'Dark Mode', key: 'darkMode' },
@@ -105,67 +79,34 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
         </button>
       </div>
 
-      {/* AI Analysis */}
-      <div className={styles.sectionTitle}>
-        <span className={styles.sectionLabel}>— AI analysis</span>
-        <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--ink-faint)', fontFamily: 'var(--font-body)' }}>mate v2</span>
-      </div>
-      <div className={styles.aiSection}>
-        <div className={styles.aiCard}>
-          <div className={styles.aiCardHeader}>
-            <ScoreDial score={strengthScore} />
-            <div>
-              <div className={styles.aiScoreLabel}>Profile Strength</div>
-              <div className={styles.aiScoreValue}>{strengthScore}<span style={{ fontSize: 14, color: 'var(--ink-faint)' }}>/100</span></div>
-              <div className={styles.aiScoreSub}>Top 22% of CS juniors</div>
+      {/* Skills — derived from the uploaded CV */}
+      {profile.skills && profile.skills.length > 0 && (
+        <>
+          <div className={styles.sectionTitle}>
+            <span className={styles.sectionLabel}>— skills <span className={styles.sectionCount}>[{profile.skills.length}]</span></span>
+          </div>
+          <div className={styles.docSection}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {profile.skills.map((skill) => (
+                <span
+                  key={skill}
+                  style={{
+                    padding: '4px 10px',
+                    border: '1px solid var(--line)',
+                    borderRadius: 4,
+                    fontSize: 12,
+                    color: 'var(--ink-dim)',
+                    background: 'var(--bg-1)',
+                    fontFamily: 'var(--font-body)',
+                  }}
+                >
+                  {skill}
+                </span>
+              ))}
             </div>
           </div>
-          <div className={styles.aiSep}>───── strengths ─────</div>
-          {strongAreas.map((s, i) => (
-            <div key={i} className={styles.aiItem}>
-              <span className={styles.aiItemOk}>✓</span>
-              <span>{s}</span>
-            </div>
-          ))}
-          <div className={styles.aiSep}>───── improve ─────</div>
-          {suggestions.map((s, i) => (
-            <div key={i} className={styles.aiItem}>
-              <span className={styles.aiItemWarn}>⚠</span>
-              <span>{s}</span>
-            </div>
-          ))}
-          <button
-            className={styles.analyzeBtn}
-            disabled={analyzing}
-            onClick={() => { setAnalyzing(true); setTimeout(() => { setAnalyzing(false); navigate('/ai-chat'); }, 1200); }}
-          >
-            {analyzing ? <><span className="spinner" /> ANALYZING…</> : 'Get Detailed Analysis →'}
-          </button>
-        </div>
-      </div>
-
-      {/* Connected Accounts */}
-      <div className={styles.sectionTitle}>
-        <span className={styles.sectionLabel}>— connected accounts</span>
-      </div>
-      <div className={styles.accountSection}>
-        <div className={styles.accountRow}>
-          <div className={styles.accountIcon}>Li</div>
-          <div className={styles.accountInfo}>
-            <div className={styles.accountName}>LinkedIn</div>
-            <div className={styles.accountHandle}>@{profile.name?.toLowerCase().replace(/\s/g, '')}</div>
-          </div>
-          <span className={styles.connectedBadge}><span className={styles.connectedBadgeDot} />connected</span>
-        </div>
-        <div className={styles.accountRow}>
-          <div className={styles.accountIcon}>Gh</div>
-          <div className={styles.accountInfo}>
-            <div className={styles.accountName}>GitHub</div>
-            <div className={styles.accountHandle}>not connected</div>
-          </div>
-          <button className={styles.connectBtn}>Connect</button>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Settings */}
       <div className={styles.sectionTitle}>
@@ -188,11 +129,11 @@ export default function ProfilePage({ onLogout }: ProfilePageProps) {
       {/* Footer */}
       <div className={styles.profileFooter}>
         <button className={styles.aboutLink} onClick={() => navigate('/about')}>
-          ABOUT CAREERMATE →
+          ABOUT FURSA →
         </button>
         <button className={styles.logoutBtn} onClick={onLogout}>⏻ Logout</button>
       </div>
-      <div className={styles.version}>careermate v1.0 · se411 · 2026</div>
+      <div className={styles.version}>fursa v1.0 · cs496 · 2026</div>
     </div>
   );
 }

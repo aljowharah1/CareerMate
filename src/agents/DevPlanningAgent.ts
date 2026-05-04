@@ -42,17 +42,31 @@ When scoring: be honest and data-driven.`
       return this.emptyProfile();
     }
 
-    // AI reads the CV text and extracts structured profile
-    const prompt = `Extract info from this CV. Return ONLY JSON, no markdown, no explanation:
-{"name":"","email":"","major":"","university":"","gpa":"","skills":[],"experience":[],"education":[],"projects":[],"languages":[],"preferredFields":[],"rawCV":"","coverLetterStyle":null}
+    // AI reads the CV text and extracts structured profile.
+    // Note: rawCV is intentionally NOT requested from the LLM — we set it ourselves below
+    // from the parsed text to avoid the LLM echoing back / truncating the body.
+    const prompt = `Extract structured info from this CV. Return ONLY a JSON object — no markdown, no explanation, no preamble.
 
-CV:
-${cvText.slice(0, 1500)}`;
+Schema:
+{"name":"<full name of the candidate, e.g. 'Jane Smith' — never a section header, page title, or 'Curriculum Vitae'>","email":"","major":"","university":"","gpa":"","skills":[],"experience":[],"education":[],"projects":[],"languages":[],"preferredFields":[]}
+
+The "name" field MUST be the candidate's actual full name (typically 2-4 words, title case, found in the top portion of the CV). If you cannot identify a real person's name, use an empty string.
+
+CV TEXT:
+${cvText.slice(0, 2000)}`;
 
     const raw = await this.callLLM(prompt);
     console.log("🔍 Profile raw response:", raw);
     const profile = this.parseJSON<StudentProfile>(raw, this.emptyProfile());
+    // Always store the full extracted text ourselves — the LLM is unreliable for this.
+    profile.rawCV = cvText;
     console.log("👤 Profile parsed:", profile);
+
+    // Validate the LLM-returned name — reject obvious non-names like "Curriculum Vitae" or section headers
+    if (profile.name && !this.looksLikePersonName(profile.name)) {
+      console.warn("AI returned a non-name in 'name' field:", profile.name, "→ falling back to local extraction");
+      profile.name = "";
+    }
 
     // If AI failed to extract name, fall back to local parsing
     if (!profile.name || profile.name === "Unknown" || profile.name === "") {
@@ -84,16 +98,39 @@ ${cvText.slice(0, 1500)}`;
   // Proper PDF text extraction using pdfjs-dist from node_modules
   // Replace the parseProfileLocally method in DevPlanningAgent.ts with this:
 
+// Heuristic check: does this string look like a real person's name?
+// Rejects "Curriculum Vitae", "RESUME", "Software Engineer", page numbers, etc.
+private looksLikePersonName(value: string): boolean {
+  const trimmed = (value || "").trim();
+  if (trimmed.length < 4 || trimmed.length > 60) return false;
+  if (/\d/.test(trimmed)) return false;                     // names don't contain digits
+  if (/[@:/\\|]/.test(trimmed)) return false;               // emails / URLs / paths
+  // Reject common CV/resume header phrases
+  const blocklist = /\b(curriculum\s+vitae|resume|c\.?v\.?|profile|cover\s+letter|page\s+\d+|references|portfolio|biography)\b/i;
+  if (blocklist.test(trimmed)) return false;
+  // Reject job titles that sometimes appear right under the name
+  const titleBlocklist = /\b(engineer|developer|student|intern|manager|analyst|designer|consultant|specialist)\b/i;
+  if (titleBlocklist.test(trimmed)) return false;
+  // Must be 2-4 whitespace-separated tokens, each starting with a letter
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length < 2 || tokens.length > 4) return false;
+  return tokens.every((t) => /^[A-Z][a-zA-Z'-]+$/.test(t) || /^[A-Z]+$/.test(t));
+}
+
 private parseProfileLocally(text: string): StudentProfile {
   const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
   const gpaMatch = text.match(/GPA[:\s]+(\d+\.\d+)/i);
   const majorMatch = text.match(/Major[:\s]+([^\n\r]+)/i);
   const uniMatch = text.match(/University[:\s]+([^\n\r]+)/i);
 
-  // Name is always the first non-empty line
-  const firstLine = text.split(/\n|\r/)
-    .map(l => l.trim())
-    .find(l => l.length > 2 && l.length < 60 && !l.includes('@') && !l.includes(':'));
+  // Try explicit "Name: ..." prefix first, then scan the first 8 non-empty lines
+  // for the first one that looks like a real person's name.
+  const explicitNameMatch = text.match(/^\s*Name[:\s]+([^\n\r]+)/im);
+  const candidateLines = text.split(/\n|\r/).map((l) => l.trim()).filter((l) => l.length > 0).slice(0, 8);
+  const detectedName =
+    (explicitNameMatch && this.looksLikePersonName(explicitNameMatch[1]) ? explicitNameMatch[1].trim() : null) ||
+    candidateLines.find((l) => this.looksLikePersonName(l)) ||
+    'Student';
 
   const skillsSection = text.match(/SKILLS?\s*\n?([\s\S]+?)(?=EDUCATION|EXPERIENCE|PROJECTS|LANGUAGES|CERTIFICATIONS|$)/i);
   const skills = skillsSection
@@ -108,7 +145,7 @@ private parseProfileLocally(text: string): StudentProfile {
   const university = uniMatch ? uniMatch[1].trim() : undefined;
 
   return {
-    name: firstLine || 'Student',
+    name: detectedName,
     email: emailMatch?.[0],
     major,
     university,
@@ -119,7 +156,7 @@ private parseProfileLocally(text: string): StudentProfile {
     projects: [],
     languages: [],
     preferredFields: this.inferPreferredFields(major, skills),
-    rawCV: text.slice(0, 200), // Keep short — just for reference
+    rawCV: text,
   };
 }
 
